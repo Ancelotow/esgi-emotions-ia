@@ -1,4 +1,3 @@
-import 'package:camera/camera.dart';
 import 'package:emotion_detector_app/presentation/models/camera_session.dart';
 import 'package:emotion_detector_app/presentation/views/face_detector_view.dart';
 import 'package:flutter/material.dart';
