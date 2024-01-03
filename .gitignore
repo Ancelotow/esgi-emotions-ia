@@ -2,3 +2,7 @@
 out/
 dataset/
 dataset.csv
+.DS_Store
+*.csv
+venv
+__pycache__
