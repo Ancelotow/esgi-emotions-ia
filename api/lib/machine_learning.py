@@ -1,25 +1,20 @@
 import pickle
 import matplotlib.pyplot as plt
 import numpy as np
-from sklearn.metrics import confusion_matrix
-from lib.graphs import one_hot_encoder
-from model.neuron import Neuron
+from api.lib.graphs import one_hot_encoder
+from api.model.neuron import Neuron
 
-FILE_MODEL = "model.dat"
 LEARNING_RATE = 1E-3
 NB_ITERATION = 5
-DATASET_NAME_TEST = "./dataset_train.csv"
-DATASET_NAME_TRAIN = "./dataset_train.csv"
-DATASET_NAME_PREDICT = "./dataset_predict.csv"
 
 
-def get_data(type):
+def get_data(type, path):
     if type == "TEST":
-        filename = DATASET_NAME_TEST
+        filename = "../../dataset/" + path + "/dataset_train.csv"
     elif type == "TRAIN":
-        filename = DATASET_NAME_TRAIN
+        filename = "../../dataset/" + path + "/dataset_train.csv"
     else:
-        filename = DATASET_NAME_PREDICT
+        filename = "../../dataset/" + path + "/dataset_predict.csv"
     data = np.loadtxt(filename, skiprows=1, delimiter=',')
     inputs = data[:, :- 1] / 255
     outputs = data[:, -1]
@@ -36,13 +31,13 @@ def learning(classifier, inputs, outputs):
     plt.show()
 
 
-def save_model(classifier):
-    with open(FILE_MODEL, 'wb') as file:
+def save_model(classifier, file_model):
+    with open(file_model, 'wb') as file:
         pickle.dump(classifier, file)
 
 
-def load_model():
-    with open(FILE_MODEL, 'rb') as file:
+def load_model(file_model):
+    with open(file_model, 'rb') as file:
         classifier = pickle.load(file)
     return classifier
 

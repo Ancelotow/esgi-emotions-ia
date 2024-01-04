@@ -1,4 +1,4 @@
-from model.neuron import Neuron
+from api.model.neuron import Neuron
 
 
 def argmax(values):
