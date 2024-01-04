@@ -1,7 +1,5 @@
 .idea/
 out/
-dataset/
-dataset.csv
 .DS_Store
 *.csv
 venv
