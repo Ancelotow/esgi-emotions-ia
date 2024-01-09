@@ -32,8 +32,8 @@ HIDDEN_LAYER_SIZE = (300, 300)
 if __name__ == '__main__':
     # os.remove(DATASET_FILE)
     # Creation dataset.csv
-    # write_header_dataset()
-    # write_dataset_file(DATASET_TEST)
+    # write_header_dataset("emotions", 49, DATASET_FILE)
+    # write_dataset_file(DATASET_TEST, CLASSIFICATION, DATASET_FILE)
 
     inputs, outputs = get_data("TRAIN", PATH)
     if not exists(FILE_MODEL) or DO_LEARN:
@@ -60,4 +60,4 @@ if __name__ == '__main__':
                 inputs.append(img.getpixel((x, y)))
     predict = classifier.predict([inputs])
     predict_feeling = CLASSIFICATION[int(predict[0])]
-    print("Predict : " + str(predict_feeling))
+    print("FEELS Predict : " + str(predict_feeling))

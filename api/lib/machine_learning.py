@@ -8,13 +8,16 @@ LEARNING_RATE = 1E-3
 NB_ITERATION = 5
 
 
-def get_data(type, path):
+def get_data(type: str, path: str):
+    filename = ""
     if type == "TEST":
-        filename = "../../dataset/" + path + "/dataset_train.csv"
+        filename = "../../dataset/" + path + "/dataset_test.csv"
     elif type == "TRAIN":
         filename = "../../dataset/" + path + "/dataset_train.csv"
     else:
         filename = "../../dataset/" + path + "/dataset_predict.csv"
+    print("HERE")
+    print(filename)
     data = np.loadtxt(filename, skiprows=1, delimiter=',')
     inputs = data[:, :- 1] / 255
     outputs = data[:, -1]
