@@ -1,12 +1,12 @@
+# Autor: Philippe Vo
+from sklearn.metrics import ConfusionMatrixDisplay, accuracy_score
 from sklearn.metrics import confusion_matrix
 from sklearn.neural_network import MLPClassifier
-import os
 from os.path import exists
 from PIL import Image
-import platform
-import cv2
-
 from api.lib.machine_learning import get_data, load_model, save_model
+import matplotlib.pyplot as plt
+
 
 PATH = "feelings"
 # DATASETS
@@ -35,7 +35,7 @@ if __name__ == '__main__':
     # write_header_dataset("emotions", 49, DATASET_FILE)
     # write_dataset_file(DATASET_TEST, CLASSIFICATION, DATASET_FILE)
 
-    inputs, outputs = get_data("TRAIN", PATH)
+    inputs, outputs = get_data("TEST", PATH)
     if not exists(FILE_MODEL) or DO_LEARN:
         # TRAIN
         classifier = MLPClassifier(hidden_layer_sizes=HIDDEN_LAYER_SIZE, max_iter=2000)
@@ -50,7 +50,13 @@ if __name__ == '__main__':
 
     predict = classifier.predict(inputs)
     margin_errors = confusion_matrix(outputs, predict, normalize='true')
-    print("Errors : \n" + str(margin_errors))
+    score = accuracy_score(outputs, predict)
+    color = 'white'
+    disp = ConfusionMatrixDisplay(confusion_matrix=margin_errors, display_labels=CLASSIFICATION)
+    disp.plot()
+    plt.show()
+    print("Score : " + str(score) + "\n")
+    #print("Errors : \n" + str(margin_errors))
 
     # PREDICT
     inputs = []
