@@ -5,9 +5,8 @@ import os
 from os.path import exists
 from PIL import Image
 import platform
-import cv2
 
-from api.lib.machine_learning import get_data, load_model, save_model
+from lib.machine_learning import get_data, load_model, save_model
 from model.model import Model
 
 PATH = ["eyes", "feelings", "hair", "origin"]
