@@ -6,6 +6,7 @@ from os.path import exists
 from PIL import Image
 import platform
 
+from api.lib.dataset import write_dataset_file
 from lib.machine_learning import get_data, load_model, save_model
 from model.model import Model
 
@@ -34,7 +35,7 @@ if __name__ == '__main__':
     # os.remove(DATASET_FILE)
     # Creation dataset.csv
     # write_header_dataset()
-    # write_dataset_file(DATASET_TEST)
+    write_dataset_file(DATASET_TEST)
 
     print(platform.architecture()[0])
     inputs, outputs = get_data("TRAIN", PATH)
