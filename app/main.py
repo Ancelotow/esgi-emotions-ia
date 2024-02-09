@@ -3,6 +3,10 @@ from PIL import Image, ImageTk
 import cv2
 from api.api import feeling_detection
 
+faceCascade = cv2.CascadeClassifier('lib/haarcascade.xml')
+eyeCascade = cv2.CascadeClassifier('lib/eye_cascade.xml')
+cap = cv2.VideoCapture(0)
+text_id = None
 
 def feeling_detector(x, y, w, h, gray):
     roi_gray = gray[y:y + h, x:x + w]
@@ -21,6 +25,7 @@ def face_detector(img, gray):
     for (x, y, w, h) in faces:
         cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 2)
         feeling = feeling_detector(x, y, w, h, gray)
+        canvas.itemconfig(text_id, text=feeling)
         cv2.putText(img, feeling, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 0, 0), 2)
 
 def eyes_detector(img, gray):
@@ -49,6 +54,7 @@ def update_frame():
     photo = ImageTk.PhotoImage(image)
     video_label.config(image=photo)
     video_label.image = photo
+     # Update the text in the canvas
     window.after(20, update_frame)
 
 
@@ -57,14 +63,14 @@ if __name__ == '__main__':
     video_label = tk.Label(window)
     video_label.pack()
 
-    faceCascade = cv2.CascadeClassifier('lib/haarcascade.xml')
-    eyeCascade = cv2.CascadeClassifier('lib/eye_cascade.xml')
-    cap = cv2.VideoCapture(0)
     cap.set(3, 640)
     cap.set(4, 480)
 
-    # Start updating the frames
-    update_frame()
+    # Create a canvas
+    canvas = tk.Canvas(window, width=200, height=200)
+    canvas.pack()
+    canvas.create_rectangle(50, 50, 200, 200, fill="white")
+    text_id = canvas.create_text(125, 125, text="Unknown", fill="black")
 
-    # Start the main loop
+    update_frame()
     window.mainloop()
