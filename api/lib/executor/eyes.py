@@ -26,7 +26,7 @@ CLASSIFICATION = ["amber", "blue", "brown", "gray", "grayscale", "green", "hazel
 
 # LEARNING
 DO_LEARN = True
-HIDDEN_LAYER_SIZE = (300, )
+HIDDEN_LAYER_SIZE = (150, 250, 350, 250, 150)
 
 if __name__ == '__main__':
     # os.remove(DATASET_FILE)
@@ -35,14 +35,13 @@ if __name__ == '__main__':
     # write_header_dataset("eyes", 27, DATASET_FILE)
     # write_dataset_file(DATASET_TEST, CLASSIFICATION, DATASET_FILE)
 
+    print(os.getcwd())
     inputs, outputs = get_data("TEST", PATH)
     if not exists(FILE_MODEL) or DO_LEARN:
         # TRAIN
-        classifier = MLPClassifier(hidden_layer_sizes=HIDDEN_LAYER_SIZE, max_iter=3000)
+        classifier = MLPClassifier(hidden_layer_sizes=HIDDEN_LAYER_SIZE, max_iter=100)
         classifier.fit(inputs, outputs)
-        margin_errors = classifier.score(inputs, outputs)
-        print("Margin of errors ", str(margin_errors))
-        save_model(classifier, PATH)
+        save_model(classifier, FILE_MODEL)
     else:
         classifier = load_model(FILE_MODEL)
 
@@ -56,11 +55,11 @@ if __name__ == '__main__':
     print("Score : " + str(score) + "\n")
 
     # PREDICT
-    inputs = []
-    with Image.open("../../dataset/predict/eyes.png") as img:
-        for x in range(img.width):
-            for y in range(img.height):
-                inputs.append(img.getpixel((x, y)))
-    predict = classifier.predict([inputs])
-    predict_eyes = CLASSIFICATION[int(predict[0])]
-    print("EYES Predict : " + str(predict_eyes))
+    #inputs = []
+    #with Image.open("../../dataset/predict/eyes.png") as img:
+    #    for x in range(img.width):
+    #        for y in range(img.height):
+    #            inputs.append(img.getpixel((x, y)))
+    #predict = classifier.predict([inputs])
+    #predict_eyes = CLASSIFICATION[int(predict[0])]
+    #print("EYES Predict : " + str(predict_eyes))
