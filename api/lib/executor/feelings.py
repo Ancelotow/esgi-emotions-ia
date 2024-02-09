@@ -1,66 +1,85 @@
+import os
+import cv2
+import numpy as np
 from sklearn.metrics import ConfusionMatrixDisplay, accuracy_score
 from sklearn.metrics import confusion_matrix
 from sklearn.neural_network import MLPClassifier
 from os.path import exists
-from PIL import Image
-from api.lib.machine_learning import get_data, load_model, save_model
+from skimage import io
+from api.lib.machine_learning import load_model, save_model
 import matplotlib.pyplot as plt
-
+from skimage.transform import resize
 
 PATH = "feelings"
 # DATASETS
 FILE_MODEL = "../../dataset/"+PATH+"/model.dat"
 DATASET_TRAIN = "../../dataset/"+PATH+"/train"
 DATASET_TEST = "../../dataset/"+PATH+"/test"
-DATASET_FILE = "../../dataset/"+PATH+"/dataset_train.csv"
-
-
-DATASET_NAME_TEST = "../../dataset/"+PATH+"/dataset_train.csv"
-DATASET_NAME_TRAIN = "../../dataset/"+PATH+"/dataset_train.csv"
-DATASET_NAME_PREDICT = "../../dataset/"+PATH+"/dataset_predict.csv"
 
 # CLASSIFICATION
 CLASSIFICATION = ["angry", "disgusted", "fearful", "happy", "neutral", "sad", "surprised"]
 
-
-# LEARNING
+# Parameters
 DO_LEARN = True
-HIDDEN_LAYER_SIZE = (156, )
+HIDDEN_LAYER_SIZE = ()
+MAX_ITER = 50
+CURRENT_DATASET = DATASET_TRAIN
+TYPE_DATASET = "TRAIN"
+TRANSFORM_IMAGE = True
+
+def update_images(dir):
+    for i in range(len(CLASSIFICATION)):
+        classification_folder = CLASSIFICATION[i]
+        path = dir + "/" + classification_folder
+        filenames = os.listdir(path)
+        for fn in filenames:
+            img_path = path + "/" + fn
+            img = io.imread(img_path, as_gray=True)  # Load the image in grayscale
+            img_resized = resize(img, (64, 64))
+            for _ in range(2):
+                sobelx = cv2.Sobel(np.float32(img_resized), cv2.CV_64F, 1, 0, ksize=5)
+                sobely = cv2.Sobel(np.float32(img_resized), cv2.CV_64F, 0, 1, ksize=5)
+                img_resized = np.hypot(sobelx, sobely)
+                img_resized *= 255.0 / np.max(img_resized)
+            cv2.imwrite(img_path, img_resized)
+
+
+def get_data(dir):
+    inputs = []
+    outputs = []
+    for i in range(len(CLASSIFICATION)):
+        classification_folder = CLASSIFICATION[i]
+        path = dir + "/" + classification_folder
+        filenames = os.listdir(path)
+        for fn in filenames:
+            img = io.imread(path + "/" + fn)
+            img_resized = resize(img, (64, 64))
+            inputs.append(img_resized.flatten().tolist())
+            outputs.append(i)
+    return inputs, outputs
 
 
 if __name__ == '__main__':
-    # os.remove(DATASET_FILE)
-    # Creation dataset.csv
-    # write_header_dataset("emotions", 49, DATASET_FILE)
-    # write_dataset_file(DATASET_TEST, CLASSIFICATION, DATASET_FILE)
+    if TRANSFORM_IMAGE:
+        print("Transform image...")
+        update_images(CURRENT_DATASET)
 
-    inputs, outputs = get_data("TRAIN", PATH)
+    print("Getting data...")
+    inputs, outputs = get_data(CURRENT_DATASET)
     if not exists(FILE_MODEL) or DO_LEARN:
-        # TRAIN
-        classifier = MLPClassifier(hidden_layer_sizes=HIDDEN_LAYER_SIZE, max_iter=3000)
+        print("Learning...")
+        classifier = MLPClassifier(hidden_layer_sizes=HIDDEN_LAYER_SIZE, max_iter=MAX_ITER)
         classifier.fit(inputs, outputs)
-        margin_errors = classifier.score(inputs, outputs)
-        print("Margin of errors ", str(margin_errors))
-        save_model(classifier, PATH)
+        save_model(classifier, FILE_MODEL)
     else:
         classifier = load_model(FILE_MODEL)
 
+    print("Predicting...")
     predict = classifier.predict(inputs)
     margin_errors = confusion_matrix(outputs, predict, normalize='true')
     score = accuracy_score(outputs, predict)
-    color = 'white'
     disp = ConfusionMatrixDisplay(confusion_matrix=margin_errors, display_labels=CLASSIFICATION)
     disp.plot()
     plt.show()
     print("Score : " + str(score) + "\n")
-    #print("Errors : \n" + str(margin_errors))
 
-    # PREDICT
-    inputs = []
-    with Image.open("../../dataset/predict/predict/face.png") as img:
-        for x in range(img.width):
-            for y in range(img.height):
-                inputs.append(img.getpixel((x, y)))
-    predict = classifier.predict([inputs])
-    predict_feeling = CLASSIFICATION[int(predict[0])]
-    print("FEELS Predict : " + str(predict_feeling))
