@@ -1,9 +1,16 @@
+import time
 import cv2
-import numpy as np
 from api.api import feeling_detection
 
 
-def feelings_detector(img, gray):
+def feeling_detector(x, y, w, h):
+    roi_gray = gray[y:y + h, x:x + w]
+    roi_resized = cv2.resize(roi_gray, (48, 48))  # Resize the ROI to 48x48 and convert to grayscale
+    roi_flattened = roi_resized.flatten().reshape(1, -1)  # Flatten and reshape the image
+    return feeling_detection(roi_flattened)
+
+
+def face_detector(img, gray):
     faces = faceCascade.detectMultiScale(
         gray,
         scaleFactor=1.2,
@@ -12,10 +19,7 @@ def feelings_detector(img, gray):
     )
     for (x, y, w, h) in faces:
         cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 2)
-        roi_gray = gray[y:y + h, x:x + w]
-        roi_resized = cv2.resize(roi_gray, (48, 48))  # Resize the ROI to 48x48 and convert to grayscale
-        roi_flattened = roi_resized.flatten().reshape(1, -1)  # Flatten and reshape the image
-        feeling = feeling_detection(roi_flattened)
+        feeling = feeling_detector(x, y, w, h)
         cv2.putText(img, feeling, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 0, 0), 2)
 
 
@@ -44,7 +48,7 @@ if __name__ == '__main__':
         img = cv2.flip(img, 1)
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-        feelings_detector(img, gray)
+        face_detector(img, gray)
         eyes_detector(img, gray)
 
         cv2.imshow('video', img)
