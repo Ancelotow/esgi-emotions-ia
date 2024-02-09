@@ -70,7 +70,15 @@ if __name__ == '__main__':
     canvas = tk.Canvas(window, width=200, height=200)
     canvas.pack()
     canvas.create_rectangle(50, 50, 200, 200, fill="white")
+
+    # Add Text
     text_id = canvas.create_text(125, 125, text="Unknown", fill="black")
+
+    # Add Image (with resize)
+    img = Image.open("assets/ic_feeling.png")
+    img = img.resize((20, 20))
+    photoImg = ImageTk.PhotoImage(img)
+    canvas.create_image(30, 30, image=photoImg)
 
     update_frame()
     window.mainloop()
