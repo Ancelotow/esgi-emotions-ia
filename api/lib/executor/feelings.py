@@ -1,4 +1,3 @@
-# Autor: Philippe Vo
 from sklearn.metrics import ConfusionMatrixDisplay, accuracy_score
 from sklearn.metrics import confusion_matrix
 from sklearn.neural_network import MLPClassifier
@@ -25,8 +24,8 @@ CLASSIFICATION = ["angry", "disgusted", "fearful", "happy", "neutral", "sad", "s
 
 
 # LEARNING
-DO_LEARN = False
-HIDDEN_LAYER_SIZE = (300, 300)
+DO_LEARN = True
+HIDDEN_LAYER_SIZE = (156, )
 
 
 if __name__ == '__main__':
@@ -35,15 +34,13 @@ if __name__ == '__main__':
     # write_header_dataset("emotions", 49, DATASET_FILE)
     # write_dataset_file(DATASET_TEST, CLASSIFICATION, DATASET_FILE)
 
-    inputs, outputs = get_data("TEST", PATH)
+    inputs, outputs = get_data("TRAIN", PATH)
     if not exists(FILE_MODEL) or DO_LEARN:
         # TRAIN
-        classifier = MLPClassifier(hidden_layer_sizes=HIDDEN_LAYER_SIZE, max_iter=2000)
+        classifier = MLPClassifier(hidden_layer_sizes=HIDDEN_LAYER_SIZE, max_iter=3000)
         classifier.fit(inputs, outputs)
         margin_errors = classifier.score(inputs, outputs)
         print("Margin of errors ", str(margin_errors))
-        # plt.plot(classifier.loss_curve_, color="blue")
-        # plt.show()
         save_model(classifier, PATH)
     else:
         classifier = load_model(FILE_MODEL)
@@ -60,7 +57,7 @@ if __name__ == '__main__':
 
     # PREDICT
     inputs = []
-    with Image.open("../../dataset/face.png") as img:
+    with Image.open("../../dataset/predict/predict/face.png") as img:
         for x in range(img.width):
             for y in range(img.height):
                 inputs.append(img.getpixel((x, y)))
