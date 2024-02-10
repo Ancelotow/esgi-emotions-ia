@@ -16,51 +16,53 @@ PATH = "feelings"
 FILE_MODEL = "../../dataset/"+PATH+"/model.dat"
 DATASET_TRAIN = "../../dataset/"+PATH+"/train"
 DATASET_TEST = "../../dataset/"+PATH+"/test"
+TEMP_DIR = "temp"
 
 # CLASSIFICATION
 CLASSIFICATION = ["angry", "disgusted", "fearful", "happy", "neutral", "sad", "surprised"]
 
 # Parameters
 DO_LEARN = True
-HIDDEN_LAYER = (10, 10)
+HIDDEN_LAYER = (50, 100, 50)
 MAX_ITER = 30
-TRANSFORM_IMAGE = False
 
-def update_images(dir):
+
+def transform_and_get(directory):
     for i in range(len(CLASSIFICATION)):
         classification_folder = CLASSIFICATION[i]
-        path = dir + "/" + classification_folder
-        filenames = os.listdir(path)
+        path = directory + "/" + classification_folder
+        path_temp = path + "/" + TEMP_DIR
+        filenames = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
+
+        if not os.path.exists(path_temp):
+            os.makedirs(path_temp)
+
         for fn in filenames:
             img_path = path + "/" + fn
+            img_path_tmp = path_temp + "/" + fn
             img = io.imread(img_path, as_gray=True)  # Load the image in grayscale
-            img_resized = resize(img, (128, 128))
+            img_resized = resize(img, (64, 64))
 
             # Apply Sobel filter
-            sobel_x = cv2.Sobel(img_resized, cv2.CV_64F, 1, 0, ksize=3)
-            sobel_y = cv2.Sobel(img_resized, cv2.CV_64F, 0, 1, ksize=3)
-            sobel = np.sqrt(sobel_x ** 2 + sobel_y ** 2)
-            sobel = (sobel * 255.0 / np.max(sobel)).astype(np.uint8)  # Convert to uint8
+            laplacian = cv2.Laplacian(np.float32(img_resized), cv2.CV_32F)
+            laplacian = np.absolute(laplacian)
+            max_value = np.max(laplacian)
+            if max_value == 0:
+                max_value = 1e-5  # small constant
+            laplacian *= 255.0 / max_value
 
-            # Apply dilation
-            kernel = np.ones((3, 3), np.uint8)
-            img_resized = cv2.dilate(sobel, kernel, iterations=1)
-
-            # Apply Otsu's thresholding
-            _, img_resized = cv2.threshold(img_resized, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-
-            cv2.imwrite(img_path, img_resized)
+            cv2.imwrite(img_path_tmp, laplacian)
 
 
-def get_data(dir):
+def get_data(directory):
     inputs = []
     outputs = []
     for i in range(len(CLASSIFICATION)):
         classification_folder = CLASSIFICATION[i]
-        path = dir + "/" + classification_folder
+        path = directory + "/" + classification_folder + "/" + TEMP_DIR
         filenames = os.listdir(path)
         for fn in filenames:
-            img = io.imread(path + "/" + fn)
+            img = io.imread(path + "/" + fn, as_gray=True)
             img_resized = resize(img, (64, 64))
             inputs.append(img_resized.flatten().tolist())
             outputs.append(i)
@@ -73,32 +75,17 @@ def prediction(model, inputs, outputs):
     score = accuracy_score(outputs, predict)
     return score, margin_errors
 
-def get_best_prams(inputs, outputs):
-    hidden_layer_sizes_range = [(10, 50, 10), (20, 100, 20), (30, 150, 30)]
-    max_iter_range = [30, 50, 100]
-    param_grid = dict(hidden_layer_sizes=hidden_layer_sizes_range, max_iter=max_iter_range)
-    grid = GridSearchCV(MLPClassifier(alpha=0.005), param_grid, cv=10, scoring='accuracy')
-    grid.fit(train_inputs, train_outputs)
-    print(grid.cv_results_)
-    print(grid.best_score_)
-    print(grid.best_params_)
-
 
 if __name__ == '__main__':
-    if TRANSFORM_IMAGE:
-        print("Transform image...")
-        update_images(DATASET_TRAIN)
-        update_images(DATASET_TEST)
-
+    print("Transforming data...")
+    transform_and_get(DATASET_TRAIN)
+    transform_and_get(DATASET_TEST)
     print("Getting data...")
     train_inputs, train_outputs = get_data(DATASET_TRAIN)
-    get_best_prams(train_inputs, train_outputs)
-    exit(0)
-
 
     if not exists(FILE_MODEL) or DO_LEARN:
         print("Learning...")
-        classifier = MLPClassifier(hidden_layer_sizes=HIDDEN_LAYER, max_iter=MAX_ITER, alpha=0.005)
+        classifier = MLPClassifier(hidden_layer_sizes=HIDDEN_LAYER, max_iter=MAX_ITER)
         classifier.fit(train_inputs, train_outputs)
         save_model(classifier, FILE_MODEL)
     else:
@@ -113,6 +100,8 @@ if __name__ == '__main__':
     train_disp.plot()
     test_disp.plot()
     plt.show()
-    print("Score training: " + str(train_score * 100) + "%\n")
-    print("Score validation: " + str(test_score * 100) + "%\n")
 
+    train_score_formatted = "{:.2f}".format(train_score * 100)
+    test_score_formatted = "{:.2f}".format(test_score * 100)
+    print(f"\nScore training: {str(train_score_formatted)}%")
+    print(f"Score validation: {str(test_score_formatted)}%")
