@@ -14,6 +14,8 @@ import matplotlib.pyplot as plt
 from tensorflow.keras.models import load_model
 from tensorflow.keras.layers import Dense, Flatten, Conv2D, MaxPooling2D, Dropout
 
+from api.lib.transformer import transform_for_feeling
+
 PATH = "feelings"
 # DATASETS
 DIR_MODEL = "../../dataset/"+PATH+"/model_directory"
@@ -26,7 +28,7 @@ TEMP_DIR = "temp"
 CLASSIFICATION = ["angry", "disgusted", "fearful", "happy", "neutral", "sad", "surprised"]
 
 # Parameters
-DO_LEARN = True
+DO_LEARN = False
 MAX_ITER = 35
 
 
@@ -43,23 +45,9 @@ def transform(directory):
         for fn in filenames:
             img_path = path + "/" + fn
             img_path_tmp = path_temp + "/" + fn
-            img = io.imread(img_path, as_gray=True)  # Load the image in grayscale
-            img_resized = resize(img, (64, 64))
-
-            # Increase contrast
-            img_resized = cv2.equalizeHist((img_resized * 255).astype(np.uint8))
-
-            # Apply Sobel filter
-            sobelx = cv2.Sobel(np.float32(img_resized), cv2.CV_64F, 1, 0, ksize=9)
-            sobely = cv2.Sobel(np.float32(img_resized), cv2.CV_64F, 0, 1, ksize=9)
-            sobel = np.hypot(sobelx, sobely)
-            max_value = np.max(sobel)
-            if max_value == 0:
-                max_value = 1e-5  # small constant
-            sobel *= 255.0 / max_value
-
-
-            cv2.imwrite(img_path_tmp, sobel)
+            img = io.imread(img_path, as_gray=True)
+            img_transformed = transform_for_feeling(img)
+            cv2.imwrite(img_path_tmp, img_transformed)
 
 
 def get_data(directory):
