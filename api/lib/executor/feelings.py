@@ -2,6 +2,7 @@ import os
 import cv2
 import numpy as np
 from keras import Model, Input
+from keras.callbacks import EarlyStopping
 from keras.layers import Activation
 from keras.regularizers import l2
 from skimage.transform import resize
@@ -55,9 +56,9 @@ def transform(directory):
             sobel *= 255.0 / max_value
 
             # Thresholding
-            _, thresholded = cv2.threshold(sobel, 50, 255, cv2.THRESH_BINARY)
+            #_, thresholded = cv2.threshold(sobel, 50, 255, cv2.THRESH_BINARY)
 
-            cv2.imwrite(img_path_tmp, thresholded)
+            cv2.imwrite(img_path_tmp, sobel)
 
 
 def get_data(directory):
@@ -85,8 +86,8 @@ def prediction(classifier_model, inputs, outputs):
 
 if __name__ == '__main__':
     print("Transforming data...")
-    #transform(DATASET_TRAIN)
-    #transform(DATASET_TEST)
+    transform(DATASET_TRAIN)
+    transform(DATASET_TEST)
     print("Getting data...")
     train_inputs, train_outputs = get_data(DATASET_TRAIN)
     test_inputs, test_outputs = get_data(DATASET_TEST)
@@ -116,7 +117,7 @@ if __name__ == '__main__':
         dense_1 = Dense(128, activation='relu')(flatten)
         drop_1 = Dropout(0.2)(dense_1)
         output = Dense(len(CLASSIFICATION), activation="softmax")(drop_1)
-
+        early_stopping = EarlyStopping(monitor='val_loss', patience=5)
         # Compile the model
         model = Model(inputs=input, outputs=output)
         model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=['accuracy'])
@@ -127,7 +128,7 @@ if __name__ == '__main__':
         np_inputs = np.array(train_inputs).reshape(-1, 64, 64, 1)
         np_test_inputs = np.array(test_inputs).reshape(-1, 64, 64, 1)
         np_test_outputs = np.array(test_outputs)
-        classifier = model.fit(np_inputs, np_outputs, batch_size=32, validation_data=(np_test_inputs, np_test_outputs), epochs=MAX_ITER)
+        classifier = model.fit(np_inputs, np_outputs, batch_size=32, validation_data=(np_test_inputs, np_test_outputs), epochs=MAX_ITER, callbacks=[early_stopping])
         model.save(FILE_MODEL)
 
         train_loss = classifier.history['loss']
