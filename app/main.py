@@ -2,17 +2,17 @@ import tkinter as tk
 from PIL import Image, ImageTk
 import cv2
 from api.api import feeling_detection
+from api.lib.transformer import transform_for_feeling
 
 faceCascade = cv2.CascadeClassifier('lib/haarcascade.xml')
 eyeCascade = cv2.CascadeClassifier('lib/eye_cascade.xml')
 cap = cv2.VideoCapture(0)
 text_id = None
 
+
 def feeling_detector(x, y, w, h, gray):
     roi_gray = gray[y:y + h, x:x + w]
-    roi_resized = cv2.resize(roi_gray, (48, 48))  # Resize the ROI to 48x48 and convert to grayscale
-    roi_flattened = roi_resized.flatten().reshape(1, -1)  # Flatten and reshape the image
-    return feeling_detection(roi_flattened)
+    return feeling_detection(roi_gray)
 
 
 def face_detector(img, gray):
@@ -27,6 +27,7 @@ def face_detector(img, gray):
         feeling = feeling_detector(x, y, w, h, gray)
         canvas.itemconfig(text_id, text=feeling)
         cv2.putText(img, feeling, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 0, 0), 2)
+
 
 def eyes_detector(img, gray):
     eyes = eyeCascade.detectMultiScale(
@@ -54,7 +55,7 @@ def update_frame():
     photo = ImageTk.PhotoImage(image)
     video_label.config(image=photo)
     video_label.image = photo
-     # Update the text in the canvas
+    # Update the text in the canvas
     window.after(20, update_frame)
 
 

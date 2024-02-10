@@ -1,11 +1,17 @@
+import cv2
 import numpy as np
 
-from api.lib.machine_learning import load_model
+from api.lib.executor.feelings import FEELINGS_CLASS
+from tensorflow.keras.models import load_model
 
-CLASSIFICATION = ["angry", "disgusted", "fearful", "happy", "neutral", "sad", "surprised"]
-classifier = load_model("../api/dataset/feelings/model.dat")
+from api.lib.transformer import transform_for_feeling
+
+feelings_model = load_model("../api/dataset/feelings/model.h5")
 
 def feeling_detection(image):
-    predict = classifier.predict(image)
-    predict_feeling = CLASSIFICATION[int(predict[0])]
+    img_transformed = transform_for_feeling(image)
+    cv2.imwrite("test.png", img_transformed)
+    img_reshaped = img_transformed.reshape(-1, 64, 64, 1)  # reshape the flattened image
+    predict = feelings_model.predict(img_reshaped)
+    predict_feeling = FEELINGS_CLASS[np.argmax(predict[0])]
     return predict_feeling

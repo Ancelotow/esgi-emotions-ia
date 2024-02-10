@@ -25,7 +25,7 @@ DATASET_TEST = "../../dataset/"+PATH+"/test"
 TEMP_DIR = "temp"
 
 # CLASSIFICATION
-CLASSIFICATION = ["angry", "disgusted", "fearful", "happy", "neutral", "sad", "surprised"]
+FEELINGS_CLASS = ["angry", "disgusted", "fearful", "happy", "neutral", "sad", "surprised"]
 
 # Parameters
 DO_LEARN = False
@@ -33,8 +33,8 @@ MAX_ITER = 35
 
 
 def transform(directory):
-    for i in range(len(CLASSIFICATION)):
-        classification_folder = CLASSIFICATION[i]
+    for i in range(len(FEELINGS_CLASS)):
+        classification_folder = FEELINGS_CLASS[i]
         path = directory + "/" + classification_folder
         path_temp = path + "/" + TEMP_DIR
         filenames = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
@@ -53,8 +53,8 @@ def transform(directory):
 def get_data(directory):
     inputs = []
     outputs = []
-    for i in range(len(CLASSIFICATION)):
-        classification_folder = CLASSIFICATION[i]
+    for i in range(len(FEELINGS_CLASS)):
+        classification_folder = FEELINGS_CLASS[i]
         path = directory + "/" + classification_folder + "/" + TEMP_DIR
         filenames = os.listdir(path)
         for fn in filenames:
@@ -97,7 +97,7 @@ if __name__ == '__main__':
         flatten = Flatten()(pool2)
         dense_1 = Dense(128, activation='relu')(flatten)
         drop_1 = Dropout(0.2)(dense_1)
-        output = Dense(len(CLASSIFICATION), activation="softmax")(drop_1)
+        output = Dense(len(FEELINGS_CLASS), activation="softmax")(drop_1)
         early_stopping = EarlyStopping(monitor='val_loss', patience=5)
         # Compile the model
         model = Model(inputs=input, outputs=output)
@@ -149,13 +149,13 @@ if __name__ == '__main__':
     test_score, test_margin_errors = prediction(model, test_inputs, test_outputs)
 
     plt.figure(figsize=(10, 10))
-    train_disp = ConfusionMatrixDisplay(confusion_matrix=train_margin_errors, display_labels=CLASSIFICATION)
+    train_disp = ConfusionMatrixDisplay(confusion_matrix=train_margin_errors, display_labels=FEELINGS_CLASS)
     train_disp.plot()
     plt.title('Train Confusion Matrix')
     plt.show()
 
     plt.figure(figsize=(10, 10))
-    test_disp = ConfusionMatrixDisplay(confusion_matrix=test_margin_errors, display_labels=CLASSIFICATION)
+    test_disp = ConfusionMatrixDisplay(confusion_matrix=test_margin_errors, display_labels=FEELINGS_CLASS)
     test_disp.plot()
     plt.title('Test Confusion Matrix')
     plt.show()
