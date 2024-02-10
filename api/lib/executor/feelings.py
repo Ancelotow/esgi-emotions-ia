@@ -1,18 +1,21 @@
 import os
 import cv2
 import numpy as np
+from docutils.nodes import Sequential
+from skimage.transform import resize
 from sklearn.metrics import ConfusionMatrixDisplay, accuracy_score
 from sklearn.metrics import confusion_matrix
-from sklearn.model_selection import GridSearchCV
 from sklearn.neural_network import MLPClassifier
 from os.path import exists
 from skimage import io
-from api.lib.machine_learning import load_model, save_model
 import matplotlib.pyplot as plt
-from skimage.transform import resize
+from tensorflow.keras.models import Sequential, load_model
+from tensorflow.keras.layers import Dense, Flatten, Conv2D, MaxPooling2D
+
 
 PATH = "feelings"
 # DATASETS
+DIR_MODEL = "../../dataset/"+PATH+"/model_directory"
 FILE_MODEL = "../../dataset/"+PATH+"/model.dat"
 DATASET_TRAIN = "../../dataset/"+PATH+"/train"
 DATASET_TEST = "../../dataset/"+PATH+"/test"
@@ -22,7 +25,7 @@ TEMP_DIR = "temp"
 CLASSIFICATION = ["angry", "disgusted", "fearful", "happy", "neutral", "sad", "surprised"]
 
 # Parameters
-DO_LEARN = True
+DO_LEARN = False
 HIDDEN_LAYER = (50, 100, 50)
 MAX_ITER = 30
 
@@ -71,8 +74,9 @@ def get_data(directory):
 
 def prediction(model, inputs, outputs):
     predict = model.predict(inputs)
-    margin_errors = confusion_matrix(outputs, predict, normalize='true')
-    score = accuracy_score(outputs, predict)
+    predict_labels = np.argmax(predict, axis=-1)
+    margin_errors = confusion_matrix(outputs, predict_labels, normalize='true')
+    score = accuracy_score(outputs, predict_labels)
     return score, margin_errors
 
 
@@ -85,16 +89,35 @@ if __name__ == '__main__':
 
     if not exists(FILE_MODEL) or DO_LEARN:
         print("Learning...")
-        classifier = MLPClassifier(hidden_layer_sizes=HIDDEN_LAYER, max_iter=MAX_ITER)
-        classifier.fit(train_inputs, train_outputs)
-        save_model(classifier, FILE_MODEL)
+        np_inputs = np.array(train_inputs).reshape(-1, 64, 64, 1)
+        # Define the CNN model
+        model = Sequential()
+        model.add(Conv2D(32, (3, 3), activation='relu', input_shape=(64, 64, 1)))
+        model.add(MaxPooling2D((2, 2)))
+        model.add(Conv2D(64, (3, 3), activation='relu'))
+        model.add(MaxPooling2D((2, 2)))
+        model.add(Flatten())
+        model.add(Dense(64, activation='relu'))
+        model.add(Dense(len(CLASSIFICATION), activation='softmax'))  # Output layer
+        # Compile the model
+        model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+        # Train the model
+        np_outputs = np.array(train_outputs)
+        print("Fitting...")
+        model.fit(np_inputs, np_outputs, epochs=MAX_ITER)
+        # Save the model
+        model.save(DIR_MODEL)
     else:
-        classifier = load_model(FILE_MODEL)
+        model = load_model(DIR_MODEL)
 
     print("Predicting...")
+    train_inputs = np.array(train_inputs).reshape(-1, 64, 64, 1)
+    train_score, train_margin_errors = prediction(model, train_inputs, train_outputs)
+
     test_inputs, test_outputs = get_data(DATASET_TEST)
-    train_score, train_margin_errors = prediction(classifier, train_inputs, train_outputs)
-    test_score, test_margin_errors = prediction(classifier, test_inputs, test_outputs)
+    test_inputs = np.array(test_inputs).reshape(-1, 64, 64, 1)
+    test_score, test_margin_errors = prediction(model, test_inputs, test_outputs)
+
     train_disp = ConfusionMatrixDisplay(confusion_matrix=train_margin_errors, display_labels=CLASSIFICATION)
     test_disp = ConfusionMatrixDisplay(confusion_matrix=test_margin_errors, display_labels=CLASSIFICATION)
     train_disp.plot()
