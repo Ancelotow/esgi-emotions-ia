@@ -25,9 +25,17 @@ def face_detector(img, gray):
     for (x, y, w, h) in faces:
         cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 2)
         feeling = feeling_detector(x, y, w, h, gray)
-        canvas.itemconfig(text_id, text=feeling)
-        cv2.putText(img, feeling, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 0, 0), 2)
 
+
+        # Create a semi-transparent rectangle as a background for the text
+        overlay = img.copy()
+        cv2.rectangle(overlay, (x, y - 30), (x + w, y), (0, 0, 0), -1)
+
+        # Apply the overlay
+        cv2.addWeighted(overlay, 0.5, img, 0.5, 0, img)
+
+        # Put the text on the image
+        cv2.putText(img, f"Emotion : {feeling}", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 255, 255), 2)
 
 def eyes_detector(img, gray):
     eyes = eyeCascade.detectMultiScale(
@@ -37,7 +45,7 @@ def eyes_detector(img, gray):
         minSize=(20, 20)
     )
     for (x, y, w, h) in eyes:
-        cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
+        #cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
         roi_gray = gray[y:y + h, x:x + w]
         roi_color = img[y:y + h, x:x + w]
 
@@ -61,25 +69,17 @@ def update_frame():
 
 if __name__ == '__main__':
     window = tk.Tk()
+
     video_label = tk.Label(window)
-    video_label.pack()
+    video_label.pack(side=tk.LEFT)  # Place the video on the left side
 
-    cap.set(3, 640)
-    cap.set(4, 480)
+    window_width = window.winfo_screenwidth()  # Get the window width
+    window_height = window.winfo_screenheight()  # Get the window height
 
-    # Create a canvas
-    canvas = tk.Canvas(window, width=200, height=200)
-    canvas.pack()
-    canvas.create_rectangle(50, 50, 200, 200, fill="white")
+    cap.set(3, window_width)  # Set the video width to the window width
+    cap.set(4, window_height)  # Set the video height to the window height
 
-    # Add Text
-    text_id = canvas.create_text(125, 125, text="Unknown", fill="black")
-
-    # Add Image (with resize)
-    img = Image.open("assets/ic_feeling.png")
-    img = img.resize((20, 20))
-    photoImg = ImageTk.PhotoImage(img)
-    canvas.create_image(30, 30, image=photoImg)
+    window.geometry(f"{window_width}x{window_height}")  # Set the window size to match the video size
 
     update_frame()
     window.mainloop()
