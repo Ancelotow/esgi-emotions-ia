@@ -25,10 +25,9 @@ DATASET_NAME_PREDICT = "./dataset/"+PATH+"/dataset_predict.csv"
 # CLASSIFICATION
 CLASSIFICATION = ["angry", "disgusted", "fearful", "happy", "neutral", "sad", "surprised"]
 
-
 # LEARNING
 DO_LEARN = False
-HIDDEN_LAYER_SIZE = (300, 300)
+HIDDEN_LAYER_SIZE = (400, 400)
 
 
 if __name__ == '__main__':
@@ -41,7 +40,7 @@ if __name__ == '__main__':
     inputs, outputs = get_data("TRAIN", PATH)
     if not exists(FILE_MODEL) or DO_LEARN:
         # TRAIN
-        classifier = MLPClassifier(hidden_layer_sizes=HIDDEN_LAYER_SIZE, max_iter=2000)
+        classifier = MLPClassifier(hidden_layer_sizes=HIDDEN_LAYER_SIZE, max_iter=4000)
         classifier.fit(inputs, outputs)
         margin_errors = classifier.score(inputs, outputs)
         print("Margin of errors ", str(margin_errors))
@@ -57,7 +56,7 @@ if __name__ == '__main__':
 
     # PREDICT
     inputs = []
-    with Image.open("dataset/face.png") as img:
+    with Image.open("dataset/predict/face.png") as img:
         for x in range(img.width):
             for y in range(img.height):
                 inputs.append(img.getpixel((x, y)))

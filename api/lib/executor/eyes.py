@@ -1,62 +1,65 @@
-from sklearn.metrics import confusion_matrix
+from matplotlib import pyplot as plt
+from skimage.transform import resize
+from sklearn.metrics import confusion_matrix, accuracy_score, ConfusionMatrixDisplay
 from sklearn.neural_network import MLPClassifier
 import os
 from os.path import exists
-from PIL import Image
-import platform
-import cv2
-
-from api.lib.dataset import write_header_dataset, write_dataset_file, rescale_image
-from api.lib.machine_learning import get_data, load_model, save_model
+from skimage import io
+from api.lib.machine_learning import load_model, save_model
 
 PATH = "eyes"
 # DATASETS
 FILE_MODEL = "../../dataset/" + PATH + "/model.dat"
 DATASET_TRAIN = "../../dataset/" + PATH + "/train"
 DATASET_TEST = "../../dataset/" + PATH + "/test"
-DATASET_FILE = "../../dataset/" + PATH + "/dataset_train.csv"
+DATASET_FILE = "../../dataset/" + PATH + "/dataset_test.csv"
 
 DATASET_NAME_TEST = "../../dataset/" + PATH + "/dataset_train.csv"
 DATASET_NAME_TRAIN = "../../dataset/" + PATH + "/dataset_train.csv"
 DATASET_NAME_PREDICT = "../../dataset/" + PATH + "/dataset_predict.csv"
 
 # CLASSIFICATION
-CLASSIFICATION = ["amber", "blue", "brown", "gray", "grayscale", "green", "hazel", "red"]
+CLASSIFICATION = ["amber", "blue", "brown", "gray", "green", "hazel", "red"]
 
-# LEARNING
+# Parameters
 DO_LEARN = False
-HIDDEN_LAYER_SIZE = (300, 300)
+HIDDEN_LAYER_SIZE = (150, 250, 300, 250, 150)
+MAX_ITER = 200
+CURRENT_DATASET = DATASET_TEST
+
+
+def get_data(dir):
+    inputs = []
+    outputs = []
+    for i in range(len(CLASSIFICATION)):
+        classification_folder = CLASSIFICATION[i]
+        path = dir + "/" + classification_folder
+        filenames = os.listdir(path)
+        for fn in filenames:
+            img = io.imread(path + "/" + fn)
+            img_resized = resize(img, (64, 64))
+            inputs.append(img_resized.flatten().tolist())
+            outputs.append(i)
+    return inputs, outputs
+
 
 if __name__ == '__main__':
-    # os.remove(DATASET_FILE)
-    # Creation dataset.csv
-    # rescale_image(DATASET_TRAIN, 27)
-    # write_header_dataset("eyes", 27, DATASET_FILE)
-    # write_dataset_file(DATASET_TEST, CLASSIFICATION, DATASET_FILE)
-
-    inputs, outputs = get_data("TEST", PATH)
+    print("Getting data...")
+    inputs, outputs = get_data(CURRENT_DATASET)
     if not exists(FILE_MODEL) or DO_LEARN:
         # TRAIN
-        classifier = MLPClassifier(hidden_layer_sizes=HIDDEN_LAYER_SIZE, max_iter=2000)
+        print("Training...")
+        classifier = MLPClassifier(hidden_layer_sizes=HIDDEN_LAYER_SIZE, max_iter=MAX_ITER)
         classifier.fit(inputs, outputs)
-        margin_errors = classifier.score(inputs, outputs)
-        print("Margin of errors ", str(margin_errors))
-        # plt.plot(classifier.loss_curve_, color="blue")
-        # plt.show()
-        save_model(classifier, PATH)
+        save_model(classifier, FILE_MODEL)
     else:
         classifier = load_model(FILE_MODEL)
 
+    print("Predicting...")
     predict = classifier.predict(inputs)
     margin_errors = confusion_matrix(outputs, predict, normalize='true')
-    print("Errors : \n" + str(margin_errors))
-
-    # PREDICT
-    inputs = []
-    with Image.open("../../dataset/face.png") as img:
-        for x in range(img.width):
-            for y in range(img.height):
-                inputs.append(img.getpixel((x, y)))
-    predict = classifier.predict([inputs])
-    predict_eyes = CLASSIFICATION[int(predict[0])]
-    print("EYES Predict : " + str(predict_eyes))
+    score = accuracy_score(outputs, predict)
+    disp = ConfusionMatrixDisplay(confusion_matrix=margin_errors, display_labels=CLASSIFICATION)
+    disp.plot()
+    plt.show()
+    print("Score : " + str(score) + "\n")

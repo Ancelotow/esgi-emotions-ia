@@ -16,8 +16,7 @@ def get_data(type: str, path: str):
         filename = "../../dataset/" + path + "/dataset_train.csv"
     else:
         filename = "../../dataset/" + path + "/dataset_predict.csv"
-    print("HERE")
-    print(filename)
+
     data = np.loadtxt(filename, skiprows=1, delimiter=',')
     inputs = data[:, :- 1] / 255
     outputs = data[:, -1]
