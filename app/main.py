@@ -67,19 +67,18 @@ def update_frame():
     window.after(20, update_frame)
 
 
-if __name__ == '__main__':
-    window = tk.Tk()
-
-    video_label = tk.Label(window)
-    video_label.pack(side=tk.LEFT)  # Place the video on the left side
-
-    window_width = window.winfo_screenwidth()  # Get the window width
-    window_height = window.winfo_screenheight()  # Get the window height
+def update_video_size(event):
+    window_width = window.winfo_width()  # Get the current window width
+    window_height = window.winfo_height()  # Get the current window height
 
     cap.set(3, window_width)  # Set the video width to the window width
     cap.set(4, window_height)  # Set the video height to the window height
 
-    window.geometry(f"{window_width}x{window_height}")  # Set the window size to match the video size
 
+if __name__ == '__main__':
+    window = tk.Tk()
+    video_label = tk.Label(window)
+    video_label.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)  # Make the video label fill the window
+    window.bind('<Configure>', update_video_size)  # Update the video size when the window size changes
     update_frame()
     window.mainloop()
