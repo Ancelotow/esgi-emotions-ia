@@ -1,22 +1,22 @@
 import os
 import cv2
 import numpy as np
-from docutils.nodes import Sequential
+from keras import Model, Input
+from keras.layers import Activation
+from keras.regularizers import l2
 from skimage.transform import resize
 from sklearn.metrics import ConfusionMatrixDisplay, accuracy_score
 from sklearn.metrics import confusion_matrix
-from sklearn.neural_network import MLPClassifier
 from os.path import exists
 from skimage import io
 import matplotlib.pyplot as plt
-from tensorflow.keras.models import Sequential, load_model
-from tensorflow.keras.layers import Dense, Flatten, Conv2D, MaxPooling2D
-
+from tensorflow.keras.models import load_model
+from tensorflow.keras.layers import Dense, Flatten, Conv2D, MaxPooling2D, Dropout
 
 PATH = "feelings"
 # DATASETS
 DIR_MODEL = "../../dataset/"+PATH+"/model_directory"
-FILE_MODEL = "../../dataset/"+PATH+"/model.dat"
+FILE_MODEL = "../../dataset/"+PATH+"/model.h5"
 DATASET_TRAIN = "../../dataset/"+PATH+"/train"
 DATASET_TEST = "../../dataset/"+PATH+"/test"
 TEMP_DIR = "temp"
@@ -25,12 +25,11 @@ TEMP_DIR = "temp"
 CLASSIFICATION = ["angry", "disgusted", "fearful", "happy", "neutral", "sad", "surprised"]
 
 # Parameters
-DO_LEARN = False
-HIDDEN_LAYER = (50, 100, 50)
-MAX_ITER = 30
+DO_LEARN = True
+MAX_ITER = 35
 
 
-def transform_and_get(directory):
+def transform(directory):
     for i in range(len(CLASSIFICATION)):
         classification_folder = CLASSIFICATION[i]
         path = directory + "/" + classification_folder
@@ -47,14 +46,18 @@ def transform_and_get(directory):
             img_resized = resize(img, (64, 64))
 
             # Apply Sobel filter
-            laplacian = cv2.Laplacian(np.float32(img_resized), cv2.CV_32F)
-            laplacian = np.absolute(laplacian)
-            max_value = np.max(laplacian)
+            sobelx = cv2.Sobel(np.float32(img_resized), cv2.CV_64F, 1, 0, ksize=5)
+            sobely = cv2.Sobel(np.float32(img_resized), cv2.CV_64F, 0, 1, ksize=5)
+            sobel = np.hypot(sobelx, sobely)
+            max_value = np.max(sobel)
             if max_value == 0:
                 max_value = 1e-5  # small constant
-            laplacian *= 255.0 / max_value
+            sobel *= 255.0 / max_value
 
-            cv2.imwrite(img_path_tmp, laplacian)
+            # Thresholding
+            _, thresholded = cv2.threshold(sobel, 50, 255, cv2.THRESH_BINARY)
+
+            cv2.imwrite(img_path_tmp, thresholded)
 
 
 def get_data(directory):
@@ -72,8 +75,8 @@ def get_data(directory):
     return inputs, outputs
 
 
-def prediction(model, inputs, outputs):
-    predict = model.predict(inputs)
+def prediction(classifier_model, inputs, outputs):
+    predict = classifier_model.predict(inputs)
     predict_labels = np.argmax(predict, axis=-1)
     margin_errors = confusion_matrix(outputs, predict_labels, normalize='true')
     score = accuracy_score(outputs, predict_labels)
@@ -82,39 +85,84 @@ def prediction(model, inputs, outputs):
 
 if __name__ == '__main__':
     print("Transforming data...")
-    transform_and_get(DATASET_TRAIN)
-    transform_and_get(DATASET_TEST)
+    #transform(DATASET_TRAIN)
+    #transform(DATASET_TEST)
     print("Getting data...")
     train_inputs, train_outputs = get_data(DATASET_TRAIN)
+    test_inputs, test_outputs = get_data(DATASET_TEST)
+
 
     if not exists(FILE_MODEL) or DO_LEARN:
-        print("Learning...")
-        np_inputs = np.array(train_inputs).reshape(-1, 64, 64, 1)
+        print("Modeling...")
         # Define the CNN model
-        model = Sequential()
-        model.add(Conv2D(32, (3, 3), activation='relu', input_shape=(64, 64, 1)))
-        model.add(MaxPooling2D((2, 2)))
-        model.add(Conv2D(64, (3, 3), activation='relu'))
-        model.add(MaxPooling2D((2, 2)))
-        model.add(Flatten())
-        model.add(Dense(64, activation='relu'))
-        model.add(Dense(len(CLASSIFICATION), activation='softmax'))  # Output layer
+        input = Input(shape=(64, 64, 1))
+        conv1 = Conv2D(32, (3, 3), padding='same', strides=(1, 1), kernel_regularizer=l2(0.001))(input)
+        conv1 = Dropout(0.1)(conv1)
+        conv1 = Activation('relu')(conv1)
+        pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
+        conv2 = Conv2D(64, (3, 3), padding='same', strides=(1, 1), kernel_regularizer=l2(0.001))(pool1)
+        conv2 = Dropout(0.1)(conv2)
+        conv2 = Activation('relu')(conv2)
+        pool2 = MaxPooling2D(pool_size=(2, 2))(conv2)
+        conv3 = Conv2D(128, (3, 3), padding='same', strides=(1, 1), kernel_regularizer=l2(0.001))(pool2)
+        conv3 = Dropout(0.1)(conv3)
+        conv3 = Activation('relu')(conv3)
+        pool3 = MaxPooling2D(pool_size=(2, 2))(conv3)
+        conv4 = Conv2D(256, (3, 3), padding='same', strides=(1, 1), kernel_regularizer=l2(0.001))(pool3)
+        conv4 = Dropout(0.1)(conv4)
+        conv4 = Activation('relu')(conv4)
+        pool4 = MaxPooling2D(pool_size=(2, 2))(conv4)
+        flatten = Flatten()(pool4)
+        dense_1 = Dense(128, activation='relu')(flatten)
+        drop_1 = Dropout(0.2)(dense_1)
+        output = Dense(len(CLASSIFICATION), activation="softmax")(drop_1)
+
         # Compile the model
-        model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+        model = Model(inputs=input, outputs=output)
+        model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=['accuracy'])
+        model.summary()
         # Train the model
-        np_outputs = np.array(train_outputs)
         print("Fitting...")
-        model.fit(np_inputs, np_outputs, epochs=MAX_ITER)
+        np_outputs = np.array(train_outputs)
+        np_inputs = np.array(train_inputs).reshape(-1, 64, 64, 1)
+        np_test_inputs = np.array(test_inputs).reshape(-1, 64, 64, 1)
+        np_test_outputs = np.array(test_outputs)
+        classifier = model.fit(np_inputs, np_outputs, batch_size=32, validation_data=(np_test_inputs, np_test_outputs), epochs=MAX_ITER)
+        model.save(FILE_MODEL)
+
+        train_loss = classifier.history['loss']
+        test_loss = classifier.history['val_loss']
+        train_accuracy = classifier.history['accuracy']
+        test_accuracy = classifier.history['val_accuracy']
+
+        # Plotting a line chart to visualize the loss and accuracy values by epochs.
+        fig1, ax1 = plt.subplots(figsize=(15, 7))
+        ax1.plot(train_loss, label='Train Loss', color='royalblue', marker='o', markersize=5)
+        ax1.plot(test_loss, label='Test Loss', color='orangered', marker='o', markersize=5)
+        ax1.set_xlabel('Epochs', fontsize=14)
+        ax1.set_ylabel('Categorical Crossentropy', fontsize=14)
+        ax1.legend(fontsize=14)
+        ax1.tick_params(axis='both', labelsize=12)
+        fig1.suptitle("Loss of CNN Models", fontsize=16)
+        plt.show()
+
+        fig2, ax2 = plt.subplots(figsize=(15, 7))
+        ax2.plot(train_accuracy, label='Train Accuracy', color='royalblue', marker='o', markersize=5)
+        ax2.plot(test_accuracy, label='Test Accuracy', color='orangered', marker='o', markersize=5)
+        ax2.set_xlabel('Epochs', fontsize=14)
+        ax2.set_ylabel('Accuracy', fontsize=14)
+        ax2.legend(fontsize=14)
+        ax2.tick_params(axis='both', labelsize=12)
+        fig2.suptitle("Accuracy of CNN Models", fontsize=16)
+        plt.show()
         # Save the model
-        model.save(DIR_MODEL)
     else:
-        model = load_model(DIR_MODEL)
+        model = load_model(FILE_MODEL)
 
     print("Predicting...")
     train_inputs = np.array(train_inputs).reshape(-1, 64, 64, 1)
     train_score, train_margin_errors = prediction(model, train_inputs, train_outputs)
 
-    test_inputs, test_outputs = get_data(DATASET_TEST)
     test_inputs = np.array(test_inputs).reshape(-1, 64, 64, 1)
     test_score, test_margin_errors = prediction(model, test_inputs, test_outputs)
 
@@ -128,3 +176,4 @@ if __name__ == '__main__':
     test_score_formatted = "{:.2f}".format(test_score * 100)
     print(f"\nScore training: {str(train_score_formatted)}%")
     print(f"Score validation: {str(test_score_formatted)}%")
+
