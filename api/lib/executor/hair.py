@@ -53,7 +53,7 @@ if __name__ == '__main__':
 
     # PREDICT
     inputs = []
-    with Image.open("../../dataset/face.png") as img:
+    with Image.open("../../dataset/predict/face.png") as img:
         for x in range(img.width):
             for y in range(img.height):
                 inputs.append(img.getpixel((x, y)))
