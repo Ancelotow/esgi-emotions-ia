@@ -46,17 +46,18 @@ def transform(directory):
             img = io.imread(img_path, as_gray=True)  # Load the image in grayscale
             img_resized = resize(img, (64, 64))
 
+            # Increase contrast
+            img_resized = cv2.equalizeHist((img_resized * 255).astype(np.uint8))
+
             # Apply Sobel filter
-            sobelx = cv2.Sobel(np.float32(img_resized), cv2.CV_64F, 1, 0, ksize=5)
-            sobely = cv2.Sobel(np.float32(img_resized), cv2.CV_64F, 0, 1, ksize=5)
+            sobelx = cv2.Sobel(np.float32(img_resized), cv2.CV_64F, 1, 0, ksize=9)
+            sobely = cv2.Sobel(np.float32(img_resized), cv2.CV_64F, 0, 1, ksize=9)
             sobel = np.hypot(sobelx, sobely)
             max_value = np.max(sobel)
             if max_value == 0:
                 max_value = 1e-5  # small constant
             sobel *= 255.0 / max_value
 
-            # Thresholding
-            #_, thresholded = cv2.threshold(sobel, 50, 255, cv2.THRESH_BINARY)
 
             cv2.imwrite(img_path_tmp, sobel)
 
@@ -105,15 +106,7 @@ if __name__ == '__main__':
         conv2 = Dropout(0.1)(conv2)
         conv2 = Activation('relu')(conv2)
         pool2 = MaxPooling2D(pool_size=(2, 2))(conv2)
-        conv3 = Conv2D(128, (3, 3), padding='same', strides=(1, 1), kernel_regularizer=l2(0.001))(pool2)
-        conv3 = Dropout(0.1)(conv3)
-        conv3 = Activation('relu')(conv3)
-        pool3 = MaxPooling2D(pool_size=(2, 2))(conv3)
-        conv4 = Conv2D(256, (3, 3), padding='same', strides=(1, 1), kernel_regularizer=l2(0.001))(pool3)
-        conv4 = Dropout(0.1)(conv4)
-        conv4 = Activation('relu')(conv4)
-        pool4 = MaxPooling2D(pool_size=(2, 2))(conv4)
-        flatten = Flatten()(pool4)
+        flatten = Flatten()(pool2)
         dense_1 = Dense(128, activation='relu')(flatten)
         drop_1 = Dropout(0.2)(dense_1)
         output = Dense(len(CLASSIFICATION), activation="softmax")(drop_1)
@@ -167,10 +160,16 @@ if __name__ == '__main__':
     test_inputs = np.array(test_inputs).reshape(-1, 64, 64, 1)
     test_score, test_margin_errors = prediction(model, test_inputs, test_outputs)
 
+    plt.figure(figsize=(10, 10))
     train_disp = ConfusionMatrixDisplay(confusion_matrix=train_margin_errors, display_labels=CLASSIFICATION)
-    test_disp = ConfusionMatrixDisplay(confusion_matrix=test_margin_errors, display_labels=CLASSIFICATION)
     train_disp.plot()
+    plt.title('Train Confusion Matrix')
+    plt.show()
+
+    plt.figure(figsize=(10, 10))
+    test_disp = ConfusionMatrixDisplay(confusion_matrix=test_margin_errors, display_labels=CLASSIFICATION)
     test_disp.plot()
+    plt.title('Test Confusion Matrix')
     plt.show()
 
     train_score_formatted = "{:.2f}".format(train_score * 100)
