@@ -14,14 +14,14 @@ import matplotlib.pyplot as plt
 from tensorflow.keras.models import load_model
 from tensorflow.keras.layers import Dense, Flatten, Conv2D, MaxPooling2D, Dropout
 
-from api.lib.transformer import transform_for_feeling
+from api.lib.preprocessing import preprocess_for_feeling
 
 PATH = "feelings"
 # DATASETS
-DIR_MODEL = "../../dataset/"+PATH+"/model_directory"
-FILE_MODEL = "../../dataset/"+PATH+"/model.h5"
-DATASET_TRAIN = "../../dataset/"+PATH+"/train"
-DATASET_TEST = "../../dataset/"+PATH+"/test"
+DIR_MODEL = "../../dataset/" + PATH + "/model_directory"
+FILE_MODEL = "../../dataset/" + PATH + "/model.h5"
+DATASET_TRAIN = "../../dataset/" + PATH + "/train"
+DATASET_TEST = "../../dataset/" + PATH + "/test"
 TEMP_DIR = "temp"
 
 # CLASSIFICATION
@@ -46,7 +46,7 @@ def transform(directory):
             img_path = path + "/" + fn
             img_path_tmp = path_temp + "/" + fn
             img = io.imread(img_path, as_gray=True)
-            img_transformed = transform_for_feeling(img)
+            img_transformed = preprocess_for_feeling(img)
             cv2.imwrite(img_path_tmp, img_transformed)
 
 
@@ -81,7 +81,6 @@ if __name__ == '__main__':
     train_inputs, train_outputs = get_data(DATASET_TRAIN)
     test_inputs, test_outputs = get_data(DATASET_TEST)
 
-
     if not exists(FILE_MODEL) or DO_LEARN:
         print("Modeling...")
         # Define the CNN model
@@ -109,7 +108,8 @@ if __name__ == '__main__':
         np_inputs = np.array(train_inputs).reshape(-1, 64, 64, 1)
         np_test_inputs = np.array(test_inputs).reshape(-1, 64, 64, 1)
         np_test_outputs = np.array(test_outputs)
-        classifier = model.fit(np_inputs, np_outputs, batch_size=32, validation_data=(np_test_inputs, np_test_outputs), epochs=MAX_ITER, callbacks=[early_stopping])
+        classifier = model.fit(np_inputs, np_outputs, batch_size=32, validation_data=(np_test_inputs, np_test_outputs),
+                               epochs=MAX_ITER, callbacks=[early_stopping])
         model.save(FILE_MODEL)
 
         train_loss = classifier.history['loss']
@@ -164,4 +164,3 @@ if __name__ == '__main__':
     test_score_formatted = "{:.2f}".format(test_score * 100)
     print(f"\nScore training: {str(train_score_formatted)}%")
     print(f"Score validation: {str(test_score_formatted)}%")
-
