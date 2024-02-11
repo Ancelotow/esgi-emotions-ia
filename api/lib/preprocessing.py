@@ -21,7 +21,12 @@ def preprocess_for_feeling(img):
 
 def preprocess_for_eyes(img):
     bgr_img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-    #hsv_img = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2HSV)
     img_resized = resize(bgr_img, (30, 30))
     img_resized = (img_resized * 255).astype(np.uint8)
     return img_resized
+
+
+def preprocess_for_age(img):
+    img_resized = resize(img, (64, 64))
+    img_contrasted = cv2.equalizeHist((img_resized * 255).astype(np.uint8))
+    return img_contrasted
